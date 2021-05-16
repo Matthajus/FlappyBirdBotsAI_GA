@@ -32,7 +32,7 @@ STAT_FONT = pygame.font.SysFont("comicsans", 25)
 THE_BEST_SCORE = 0
 ALL_SCORES = list()
 
-NUMBER_OF_GENERATION = 100
+NUMBER_OF_GENERATION = 20
 NUMBER_OF_REAL_RUN = 5000
 CREATE_GRAPH = True
 DRAW_THE_GAME = False
@@ -204,7 +204,7 @@ def main():
 
             print('\nThe best score: \n', THE_BEST_SCORE)
 
-            print('\n winner_003.pkl \n')
+            print('\n winner.pkl \n')
 
             n_bins = 20
 
@@ -215,7 +215,7 @@ def main():
             plt.xlabel('Dosiahnuté skóre')
             plt.ylabel('Počet hier')
 
-            plt.savefig('histogram_003')
+            plt.savefig('histogram')
             plt.show()
 
 
@@ -260,7 +260,7 @@ def showWelcomeAnimation():
         loopIter = (loopIter + 1) % 30
         basex = -((-basex + 4) % baseShift)
         playerShm(playerShmVals)
-
+        
         # draw sprites
         SCREEN.blit(IMAGES['background'], (0, 0))
         SCREEN.blit(IMAGES['player'][playerIndex],
@@ -688,7 +688,7 @@ def run(config_file):
         visualize.plot_stats(stats, ylog=False, view=True)
         visualize.plot_species(stats)
 
-        # with open('winner_old.pkl', 'rb') as f:
+        # with open('winner.pkl', 'rb') as f:
         #     data = pickle.load(f)
         #
         # node_names = {-1: 'Bird', -2: 'Upper_pipe', -3: 'Lower_pipe', -4: 'Distance', -5: 'Velocity', 0: 'Jump'}
@@ -698,7 +698,7 @@ def run(config_file):
     print('\nBest genome:\n{!s}'.format(winner))
 
 
-def replay_genome(config_path, genome_path="winner_003.pkl"):
+def replay_genome(config_path, genome_path="winner.pkl"):
     # Load requried NEAT config
     config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction, neat.DefaultSpeciesSet,
                                 neat.DefaultStagnation, config_path)
