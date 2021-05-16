@@ -32,12 +32,20 @@ STAT_FONT = pygame.font.SysFont("comicsans", 25)
 THE_BEST_SCORE = 0
 ALL_SCORES = list()
 
-NUMBER_OF_GENERATION = 150
+NUMBER_OF_GENERATION = 100
 NUMBER_OF_REAL_RUN = 5000
 CREATE_GRAPH = True
-DRAW_THE_GAME = True
+DRAW_THE_GAME = False
 DRAW_LINES = True
 TRAINING = True
+
+NETS = []
+BIRDS = []
+BASEX = 0
+BASESHIFT = 0
+UPPERPIPES = None
+LOWERPIPES = None
+INDEX_OF_CURRENT_PIPE = 0
 
 # list of all possible players (tuple of 3 positions of flap)
 PLAYERS_LIST = (
@@ -196,13 +204,18 @@ def main():
 
             print('\nThe best score: \n', THE_BEST_SCORE)
 
+            print('\n winner_003.pkl \n')
+
             n_bins = 20
 
             fig, axs = plt.subplots(1, 1)
 
             # We can set the number of bins with the `bins` kwarg
             axs.hist(ALL_SCORES, bins=n_bins)
+            plt.xlabel('Dosiahnuté skóre')
+            plt.ylabel('Počet hier')
 
+            plt.savefig('histogram_003')
             plt.show()
 
 
@@ -260,122 +273,125 @@ def showWelcomeAnimation():
 
 
 def mainGame(genomes, config):
-    global gen, THE_BEST_SCORE
+    global gen, THE_BEST_SCORE, NETS, BIRDS, BASEX, BASESHIFT, UPPERPIPES, LOWERPIPES, INDEX_OF_CURRENT_PIPE
     gen += 1
 
-    nets = []
-    birds = []
+    # NETS = []
+    # BIRDS = []
     ge = []
 
     for genome_id, genome in genomes:
         genome.fitness = 0  # start with fitness level of 0
         net = neat.nn.FeedForwardNetwork.create(genome, config)
-        nets.append(net)
-        birds.append(Bird(int(SCREENWIDTH * 0.2), int((SCREENHEIGHT - IMAGES['player'][0].get_height()) / 2)))
+        NETS.append(net)
+        BIRDS.append(Bird(int(SCREENWIDTH * 0.2), int((SCREENHEIGHT - IMAGES['player'][0].get_height()) / 2)))
         ge.append(genome)
 
     score = 0
-    basex = 0
-    baseShift = IMAGES['base'].get_width() - IMAGES['background'].get_width()
+    # BASEX = 0
+    BASESHIFT = IMAGES['base'].get_width() - IMAGES['background'].get_width()
 
     # get 2 new pipes to add to upperPipes lowerPipes list
     newPipe1 = getRandomPipe()
     newPipe2 = getRandomPipe()
 
     # list of upper pipes
-    upperPipes = [
+    UPPERPIPES = [
         {'x': SCREENWIDTH + 200, 'y': newPipe1[0]['y']},
         {'x': SCREENWIDTH + 200 + (SCREENWIDTH / 2), 'y': newPipe2[0]['y']},
     ]
 
     # list of lowerpipe
-    lowerPipes = [
+    LOWERPIPES = [
         {'x': SCREENWIDTH + 200, 'y': newPipe1[1]['y']},
         {'x': SCREENWIDTH + 200 + (SCREENWIDTH / 2), 'y': newPipe2[1]['y']},
     ]
 
     pipeVelX = -4
-    indexOfCurrentPipe = 0
+    # INDEX_OF_CURRENT_PIPE = 0
 
-    while True and len(birds) > 0:
-        for event in pygame.event.get():
-            if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
-                pygame.quit()
-                quit()
+    while True and len(BIRDS) > 0:
+        # for event in pygame.event.get():
+        #     if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
+        #         pygame.quit()
+        #         quit()
 
-        for x, bird in enumerate(birds):
-            # ge[x].fitness += 1
-            # playerIndex basex change
-            if (bird.loopIter + 1) % 3 == 0:
-                bird.index = next(bird.indexGen)
-            bird.loopIter = (bird.loopIter + 1) % 30
-            basex = -((-basex + 100) % baseShift)
+        for i in range(len(BIRDS)):
+            birdMovement(i)
 
-            # rotate the player
-            if bird.rot > -90:
-                bird.rot -= bird.velRot
+        # for x, bird in enumerate(BIRDS):
+        #     # ge[x].fitness += 1
+        #     # playerIndex basex change
+        #     if (bird.loopIter + 1) % 3 == 0:
+        #         bird.index = next(bird.indexGen)
+        #     bird.loopIter = (bird.loopIter + 1) % 30
+        #     BASEX = -((-BASEX + 100) % BASESHIFT)
+        #
+        #     # rotate the player
+        #     if bird.rot > -90:
+        #         bird.rot -= bird.velRot
+        #
+        #     # player's movement
+        #     if bird.velY < bird.maxVelY and not bird.flapped:
+        #         bird.velY += bird.accY
+        #     if bird.flapped:
+        #         bird.flapped = False
+        #
+        #         # more rotation to cover the threshold (calculated in visible rotation)
+        #         bird.rot = 45
+        #
+        #     birdHeight = IMAGES['player'][bird.index].get_height()
+        #     bird.y += min(bird.velY, BASEY - bird.y - birdHeight)
+        #
+        #     # send bird location, top pipe location and bottom pipe location and determine from network whether to
+        #     # jump or not
+        #     output = NETS[BIRDS.index(bird)].activate(
+        #         (bird.y, abs(bird.y - (UPPERPIPES[INDEX_OF_CURRENT_PIPE]['y'] + IMAGES['pipe'][0].get_height())),
+        #          abs(bird.y - (LOWERPIPES[INDEX_OF_CURRENT_PIPE]['y'])),
+        #          (LOWERPIPES[INDEX_OF_CURRENT_PIPE]['x'] - bird.x), bird.velY))
+        #
+        #     if output[0] > 0.5:  # we use a tanh activation function so result will be between -1 and 1. if over 0.5
+        #         # jump
+        #         if bird.y > -2 * IMAGES['player'][0].get_height():
+        #             bird.velY = bird.flapAcc
+        #             bird.flapped = True
+        #             # SOUNDS['wing'].play()
 
-            # player's movement
-            if bird.velY < bird.maxVelY and not bird.flapped:
-                bird.velY += bird.accY
-            if bird.flapped:
-                bird.flapped = False
-
-                # more rotation to cover the threshold (calculated in visible rotation)
-                bird.rot = 45
-
-            birdHeight = IMAGES['player'][bird.index].get_height()
-            bird.y += min(bird.velY, BASEY - bird.y - birdHeight)
-
-            # send bird location, top pipe location and bottom pipe location and determine from network whether to
-            # jump or not
-            output = nets[birds.index(bird)].activate(
-                (bird.y, abs(bird.y - (upperPipes[indexOfCurrentPipe]['y'] + IMAGES['pipe'][0].get_height())),
-                 abs(bird.y - (lowerPipes[indexOfCurrentPipe]['y'])),
-                 (lowerPipes[indexOfCurrentPipe]['x'] - bird.x), bird.velY))
-
-            if output[0] > 0.5:  # we use a tanh activation function so result will be between -1 and 1. if over 0.5
-                # jump
-                if bird.y > -2 * IMAGES['player'][0].get_height():
-                    bird.velY = bird.flapAcc
-                    bird.flapped = True
-                    # SOUNDS['wing'].play()
-
-            # move pipes to left
-        for uPipe, lPipe in zip(upperPipes, lowerPipes):
+        # move pipes to left
+        for uPipe, lPipe in zip(UPPERPIPES, LOWERPIPES):
             uPipe['x'] += pipeVelX
             lPipe['x'] += pipeVelX
 
-            for bird in birds:
+            for bird in BIRDS:
                 # check for crash here
                 crashTest = checkCrash({'x': bird.x, 'y': bird.y, 'index': bird.index},
-                                       upperPipes, lowerPipes)
+                                       UPPERPIPES, LOWERPIPES)
                 if crashTest[0]:
-                    ge[birds.index(bird)].fitness -= 1
-                    nets.pop(birds.index(bird))
-                    ge.pop(birds.index(bird))
-                    birds.pop(birds.index(bird))
+                    ge[BIRDS.index(bird)].fitness -= 1
+                    NETS.pop(BIRDS.index(bird))
+                    ge.pop(BIRDS.index(bird))
+                    BIRDS.pop(BIRDS.index(bird))
 
-        for x, bird in enumerate(birds):
+        for x, bird in enumerate(BIRDS):
             # check for score
             playerMidPos = bird.x + IMAGES['player'][0].get_width() / 2
-            for pipe in upperPipes:
+            for pipe in UPPERPIPES:
                 pipeMidPos = pipe['x'] + IMAGES['pipe'][0].get_width() / 2
                 if pipeMidPos <= playerMidPos < pipeMidPos + 4:
                     ge[x].fitness += 1
 
                     # SOUNDS['point'].play()
                 if playerMidPos > pipe['x'] + IMAGES['pipe'][0].get_width():
-                    indexOfCurrentPipe = 1
+                    INDEX_OF_CURRENT_PIPE = 1
 
         # add new pipe when first pipe is about to touch left of screen
-        if len(upperPipes) > 0 and 0 < upperPipes[0]['x'] < 5:
+        if len(UPPERPIPES) > 0 and 0 < UPPERPIPES[0]['x'] < 5:
             newPipe = getRandomPipe()
-            upperPipes.append(newPipe[0])
-            lowerPipes.append(newPipe[1])
-            upperPipes.pop(0)
-            lowerPipes.pop(0)
-            indexOfCurrentPipe = 0
+            UPPERPIPES.append(newPipe[0])
+            LOWERPIPES.append(newPipe[1])
+            UPPERPIPES.pop(0)
+            LOWERPIPES.pop(0)
+            INDEX_OF_CURRENT_PIPE = 0
             score += 1
 
             # SOUNDS['point'].play()
@@ -384,11 +400,11 @@ def mainGame(genomes, config):
             # draw sprites
             SCREEN.blit(IMAGES['background'], (0, 0))
 
-            for uPipe, lPipe in zip(upperPipes, lowerPipes):
+            for uPipe, lPipe in zip(UPPERPIPES, LOWERPIPES):
                 SCREEN.blit(IMAGES['pipe'][0], (uPipe['x'], uPipe['y']))
                 SCREEN.blit(IMAGES['pipe'][1], (lPipe['x'], lPipe['y']))
 
-            SCREEN.blit(IMAGES['base'], (basex, BASEY))
+            SCREEN.blit(IMAGES['base'], (BASEX, BASEY))
 
             # score
             score_label = STAT_FONT.render("Score: " + str(score), True, (255, 255, 255))
@@ -403,10 +419,10 @@ def mainGame(genomes, config):
                 SCREEN.blit(score_label, (10, 10))
 
             # alive
-            score_label = STAT_FONT.render("Alive: " + str(len(birds)), True, (255, 255, 255))
+            score_label = STAT_FONT.render("Alive: " + str(len(BIRDS)), True, (255, 255, 255))
             SCREEN.blit(score_label, (10, 35))
 
-            for bird in birds:
+            for bird in BIRDS:
                 # Player rotation has a threshold
                 visibleRot = bird.rotThr
                 if bird.rot <= bird.rotThr:
@@ -418,16 +434,16 @@ def mainGame(genomes, config):
                     pygame.draw.line(SCREEN, (255, 0, 0),
                                      (bird.x + IMAGES['player'][0].get_width(),
                                       bird.y + IMAGES['player'][0].get_height()),
-                                     (upperPipes[indexOfCurrentPipe]['x'] + IMAGES['pipe'][0].get_width() / 2,
-                                      upperPipes[indexOfCurrentPipe]['y'] + IMAGES['pipe'][0].get_height()), 5)
+                                     (UPPERPIPES[INDEX_OF_CURRENT_PIPE]['x'] + IMAGES['pipe'][0].get_width() / 2,
+                                      UPPERPIPES[INDEX_OF_CURRENT_PIPE]['y'] + IMAGES['pipe'][0].get_height()), 5)
                     pygame.draw.line(SCREEN, (255, 0, 0),
                                      (bird.x + IMAGES['player'][0].get_width(),
                                       bird.y + IMAGES['player'][0].get_height()),
-                                     (lowerPipes[indexOfCurrentPipe]['x'] + IMAGES['pipe'][0].get_width() / 2,
-                                      lowerPipes[indexOfCurrentPipe]['y']), 5)
+                                     (LOWERPIPES[INDEX_OF_CURRENT_PIPE]['x'] + IMAGES['pipe'][0].get_width() / 2,
+                                      LOWERPIPES[INDEX_OF_CURRENT_PIPE]['y']), 5)
 
-        pygame.display.update()
-        FPSCLOCK.tick(FPS)
+        # pygame.display.update()
+        # FPSCLOCK.tick(FPS)
 
         # # break if score gets large enough
         # if score > 500:
@@ -603,6 +619,46 @@ def getHitmask(image):
     return mask
 
 
+def birdMovement(i):
+    global NETS, BIRDS, BASEX, BASEY, BASESHIFT, UPPERPIPES, LOWERPIPES, INDEX_OF_CURRENT_PIPE
+
+    # playerIndex basex change
+    if (BIRDS[i].loopIter + 1) % 3 == 0:
+        BIRDS[i].index = next(BIRDS[i].indexGen)
+    BIRDS[i].loopIter = (BIRDS[i].loopIter + 1) % 30
+    BASEX = -((-BASEX + 100) % BASESHIFT)
+
+    # rotate the player
+    if BIRDS[i].rot > -90:
+        BIRDS[i].rot -= BIRDS[i].velRot
+
+    # player's movement
+    if BIRDS[i].velY < BIRDS[i].maxVelY and not BIRDS[i].flapped:
+        BIRDS[i].velY += BIRDS[i].accY
+    if BIRDS[i].flapped:
+        BIRDS[i].flapped = False
+
+        # more rotation to cover the threshold (calculated in visible rotation)
+        BIRDS[i].rot = 45
+
+    birdHeight = IMAGES['player'][BIRDS[i].index].get_height()
+    BIRDS[i].y += min(BIRDS[i].velY, BASEY - BIRDS[i].y - birdHeight)
+
+    # send bird location, top pipe location and bottom pipe location and determine from network whether to
+    # jump or not
+    output = NETS[i].activate(
+        (BIRDS[i].y, abs(BIRDS[i].y - (UPPERPIPES[INDEX_OF_CURRENT_PIPE]['y'] + IMAGES['pipe'][0].get_height())),
+         abs(BIRDS[i].y - (LOWERPIPES[INDEX_OF_CURRENT_PIPE]['y'])),
+         (LOWERPIPES[INDEX_OF_CURRENT_PIPE]['x'] - BIRDS[i].x), BIRDS[i].velY))
+
+    if output[0] > 0.5:  # we use a tanh activation function so result will be between -1 and 1. if over 0.5
+        # jump
+        if BIRDS[i].y > -2 * IMAGES['player'][0].get_height():
+            BIRDS[i].velY = BIRDS[i].flapAcc
+            BIRDS[i].flapped = True
+            # SOUNDS['wing'].play()
+
+
 def run(config_file):
     """
     runs the NEAT algorithm to train a neural network to play flappy bird.
@@ -632,20 +688,17 @@ def run(config_file):
         visualize.plot_stats(stats, ylog=False, view=True)
         visualize.plot_species(stats)
 
+        # with open('winner_old.pkl', 'rb') as f:
+        #     data = pickle.load(f)
+        #
+        # node_names = {-1: 'Bird', -2: 'Upper_pipe', -3: 'Lower_pipe', -4: 'Distance', -5: 'Velocity', 0: 'Jump'}
+        # visualize.draw_net(config, data, True, node_names=node_names)
+
     # show final stats
     print('\nBest genome:\n{!s}'.format(winner))
 
-    # print('\nThe best score: \n', THE_BEST_SCORE)
-    #
-    # average_score = 0
-    # for score in ALL_SCORES:
-    #     average_score += score
-    # average_score = average_score / len(ALL_SCORES)
-    #
-    # print('\nAverage score per generations: \n', average_score)
 
-
-def replay_genome(config_path, genome_path="winner.pkl"):
+def replay_genome(config_path, genome_path="winner_003.pkl"):
     # Load requried NEAT config
     config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction, neat.DefaultSpeciesSet,
                                 neat.DefaultStagnation, config_path)
