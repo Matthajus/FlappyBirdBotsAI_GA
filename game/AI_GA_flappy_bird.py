@@ -32,12 +32,12 @@ STAT_FONT = pygame.font.SysFont("comicsans", 25)
 THE_BEST_SCORE = 0
 ALL_SCORES = list()
 
-NUMBER_OF_GENERATION = 20
+NUMBER_OF_GENERATION = 1
 NUMBER_OF_REAL_RUN = 5000
 CREATE_GRAPH = True
 DRAW_THE_GAME = False
 DRAW_LINES = True
-TRAINING = True
+TRAINING = False
 
 NETS = []
 BIRDS = []
@@ -183,9 +183,6 @@ def main():
         )
 
         movementInfo = showWelcomeAnimation()
-
-        # crashInfo = mainGame(None, None)
-
         local_dir = os.path.dirname(__file__)
         config_path = os.path.join(local_dir, 'config_file.txt')
 
@@ -193,6 +190,7 @@ def main():
             run(config_path)
             print('\nThe best score: \n', THE_BEST_SCORE)
         else:
+            # realne hranie hry s vybranym genomom
             for x in range(NUMBER_OF_REAL_RUN):
                 replay_genome(config_path)
 
@@ -206,11 +204,10 @@ def main():
 
             print('\n winner.pkl \n')
 
+            # vykreslenie histogramu pri ukonceni realneho hrania
             n_bins = 20
-
             fig, axs = plt.subplots(1, 1)
 
-            # We can set the number of bins with the `bins` kwarg
             axs.hist(ALL_SCORES, bins=n_bins)
             plt.xlabel('Dosiahnuté skóre')
             plt.ylabel('Počet hier')
@@ -273,13 +270,12 @@ def showWelcomeAnimation():
 
 
 def mainGame(genomes, config):
+    """ Hlavna cast hry """
     global gen, THE_BEST_SCORE, NETS, BIRDS, BASEX, BASESHIFT, UPPERPIPES, LOWERPIPES, INDEX_OF_CURRENT_PIPE
     gen += 1
-
-    # NETS = []
-    # BIRDS = []
     ge = []
 
+    # vytvorenie neuronky pre kazdy genom a vytvaranie birdov
     for genome_id, genome in genomes:
         genome.fitness = 0  # start with fitness level of 0
         net = neat.nn.FeedForwardNetwork.create(genome, config)
@@ -288,7 +284,6 @@ def mainGame(genomes, config):
         ge.append(genome)
 
     score = 0
-    # BASEX = 0
     BASESHIFT = IMAGES['base'].get_width() - IMAGES['background'].get_width()
 
     # get 2 new pipes to add to upperPipes lowerPipes list
@@ -308,54 +303,15 @@ def mainGame(genomes, config):
     ]
 
     pipeVelX = -4
-    # INDEX_OF_CURRENT_PIPE = 0
 
     while True and len(BIRDS) > 0:
-        # for event in pygame.event.get():
-        #     if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
-        #         pygame.quit()
-        #         quit()
+        for event in pygame.event.get():
+            if event.type == QUIT or (event.type == KEYDOWN and event.key == K_ESCAPE):
+                pygame.quit()
+                quit()
 
         for i in range(len(BIRDS)):
             birdMovement(i)
-
-        # for x, bird in enumerate(BIRDS):
-        #     # ge[x].fitness += 1
-        #     # playerIndex basex change
-        #     if (bird.loopIter + 1) % 3 == 0:
-        #         bird.index = next(bird.indexGen)
-        #     bird.loopIter = (bird.loopIter + 1) % 30
-        #     BASEX = -((-BASEX + 100) % BASESHIFT)
-        #
-        #     # rotate the player
-        #     if bird.rot > -90:
-        #         bird.rot -= bird.velRot
-        #
-        #     # player's movement
-        #     if bird.velY < bird.maxVelY and not bird.flapped:
-        #         bird.velY += bird.accY
-        #     if bird.flapped:
-        #         bird.flapped = False
-        #
-        #         # more rotation to cover the threshold (calculated in visible rotation)
-        #         bird.rot = 45
-        #
-        #     birdHeight = IMAGES['player'][bird.index].get_height()
-        #     bird.y += min(bird.velY, BASEY - bird.y - birdHeight)
-        #
-        #     # send bird location, top pipe location and bottom pipe location and determine from network whether to
-        #     # jump or not
-        #     output = NETS[BIRDS.index(bird)].activate(
-        #         (bird.y, abs(bird.y - (UPPERPIPES[INDEX_OF_CURRENT_PIPE]['y'] + IMAGES['pipe'][0].get_height())),
-        #          abs(bird.y - (LOWERPIPES[INDEX_OF_CURRENT_PIPE]['y'])),
-        #          (LOWERPIPES[INDEX_OF_CURRENT_PIPE]['x'] - bird.x), bird.velY))
-        #
-        #     if output[0] > 0.5:  # we use a tanh activation function so result will be between -1 and 1. if over 0.5
-        #         # jump
-        #         if bird.y > -2 * IMAGES['player'][0].get_height():
-        #             bird.velY = bird.flapAcc
-        #             bird.flapped = True
-        #             # SOUNDS['wing'].play()
 
         # move pipes to left
         for uPipe, lPipe in zip(UPPERPIPES, LOWERPIPES):
@@ -374,6 +330,7 @@ def mainGame(genomes, config):
 
         for x, bird in enumerate(BIRDS):
             # check for score
+            # navysenie fitness, nastavenie indexu pre aktualnu pipu
             playerMidPos = bird.x + IMAGES['player'][0].get_width() / 2
             for pipe in UPPERPIPES:
                 pipeMidPos = pipe['x'] + IMAGES['pipe'][0].get_width() / 2
@@ -385,6 +342,7 @@ def mainGame(genomes, config):
                     INDEX_OF_CURRENT_PIPE = 1
 
         # add new pipe when first pipe is about to touch left of screen
+        # nastavenie indexu pre aktualnu pipu
         if len(UPPERPIPES) > 0 and 0 < UPPERPIPES[0]['x'] < 5:
             newPipe = getRandomPipe()
             UPPERPIPES.append(newPipe[0])
@@ -396,6 +354,7 @@ def mainGame(genomes, config):
 
             # SOUNDS['point'].play()
 
+        # vykreslenie hry
         if DRAW_THE_GAME:
             # draw sprites
             SCREEN.blit(IMAGES['background'], (0, 0))
@@ -430,6 +389,8 @@ def mainGame(genomes, config):
 
                 birdSurface = pygame.transform.rotate(IMAGES['player'][bird.index], visibleRot)
                 SCREEN.blit(birdSurface, (bird.x, bird.y))
+
+                # vykreslovanie ciar od birda k pipe
                 if DRAW_LINES:
                     pygame.draw.line(SCREEN, (255, 0, 0),
                                      (bird.x + IMAGES['player'][0].get_width(),
@@ -442,14 +403,16 @@ def mainGame(genomes, config):
                                      (LOWERPIPES[INDEX_OF_CURRENT_PIPE]['x'] + IMAGES['pipe'][0].get_width() / 2,
                                       LOWERPIPES[INDEX_OF_CURRENT_PIPE]['y']), 5)
 
-        # pygame.display.update()
-        # FPSCLOCK.tick(FPS)
+        if DRAW_THE_GAME:
+            pygame.display.update()
+            FPSCLOCK.tick(FPS)
 
         # # break if score gets large enough
         # if score > 500:
         #     pickle.dump(nets[0], open("best.pickle", "wb"))
         #     break
 
+    # ulozenie skore z aktualnej generacie a najlepsie skore
     print('Score: ' + str(score))
     ALL_SCORES.append(score)
     if score > THE_BEST_SCORE:
@@ -620,6 +583,11 @@ def getHitmask(image):
 
 
 def birdMovement(i):
+    """
+    Metoda pre pohyb birda, vstup a vystup z neuronky
+    :param i: predstavuje id birda v poli BIRDS
+    :return: None
+    """
     global NETS, BIRDS, BASEX, BASEY, BASESHIFT, UPPERPIPES, LOWERPIPES, INDEX_OF_CURRENT_PIPE
 
     # playerIndex basex change
@@ -651,7 +619,7 @@ def birdMovement(i):
          abs(BIRDS[i].y - (LOWERPIPES[INDEX_OF_CURRENT_PIPE]['y'])),
          (LOWERPIPES[INDEX_OF_CURRENT_PIPE]['x'] - BIRDS[i].x), BIRDS[i].velY))
 
-    if output[0] > 0.5:  # we use a tanh activation function so result will be between -1 and 1. if over 0.5
+    if output[0] > 25:  # we use a tanh activation function so result will be between -1 and 1. if over 0.5
         # jump
         if BIRDS[i].y > -2 * IMAGES['player'][0].get_height():
             BIRDS[i].velY = BIRDS[i].flapAcc
@@ -678,27 +646,34 @@ def run(config_file):
     p.add_reporter(stats)
 
     list_of_bests = list()
-    # Run for up to 50 generations.
+    # Run for up to NUMBER_OF_GENERATION generations.
     winner, list_of_bests = p.run(mainGame, NUMBER_OF_GENERATION)
 
     index_of_best = ALL_SCORES.index(max(ALL_SCORES))
     pickle.dump(list_of_bests[index_of_best], open('winner.pkl', 'wb'))
 
+    # vykreslenie grafu a modelu + ulozenie
     if CREATE_GRAPH:
         visualize.plot_stats(stats, ylog=False, view=True)
         visualize.plot_species(stats)
 
-        # with open('winner.pkl', 'rb') as f:
-        #     data = pickle.load(f)
-        #
-        # node_names = {-1: 'Bird', -2: 'Upper_pipe', -3: 'Lower_pipe', -4: 'Distance', -5: 'Velocity', 0: 'Jump'}
-        # visualize.draw_net(config, data, True, node_names=node_names)
+        with open('winner.pkl', 'rb') as f:
+            data = pickle.load(f)
+
+        node_names = {-1: 'Bird', -2: 'Upper_pipe', -3: 'Lower_pipe', -4: 'Distance', -5: 'Velocity', 0: 'Jump'}
+        visualize.draw_net(config, data, True, node_names=node_names)
 
     # show final stats
     print('\nBest genome:\n{!s}'.format(winner))
 
 
-def replay_genome(config_path, genome_path="winner.pkl"):
+def replay_genome(config_path, genome_path="winner_012.pkl"):
+    """
+    Metoda pre spustenie realneho hrania natrenovaneho jedinca
+     :param config_file: location of config file
+     :param genome_path: file .pkl which represent the best genome
+     :return: None
+    """
     # Load requried NEAT config
     config = neat.config.Config(neat.DefaultGenome, neat.DefaultReproduction, neat.DefaultSpeciesSet,
                                 neat.DefaultStagnation, config_path)
